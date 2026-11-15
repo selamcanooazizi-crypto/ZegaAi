@@ -1,0 +1,42 @@
+name: Build ZegaAI APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Extract ZIP
+        run: |
+          ZIP=$(find . -maxdepth 1 -name '*.zip' | head -n 1)
+          test -n "$ZIP"
+          mkdir project
+          unzip -q "$ZIP" -d project
+          ROOT=$(find project -name settings.gradle.kts -print -quit | xargs dirname)
+          test -n "$ROOT"
+          echo "PROJECT_DIR=$ROOT" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        run: cd "$PROJECT_DIR" && gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZegaAI-APK
+          path: '**/app/build/outputs/apk/debug/app-debug.apk'
